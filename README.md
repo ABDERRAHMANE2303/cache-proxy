@@ -22,6 +22,7 @@ This is a practice project to build the pieces behind tools like Redis and nginx
 - a per-client rate limiter
 - thread safety under concurrent load
 - measured impact: load tests with and without the proxy
+
 No caching or rate-limiting libraries are used. Both are written from scratch.
  
 ## Architecture
@@ -42,6 +43,6 @@ A request passes the rate limiter and reaches the proxy controller, which asks t
 
 ## Documentation
  
-- [Requirements specification](docs/specs/spec-v1.md)
+- [Requirements specification](docs/spec-v1.md)
 
  
