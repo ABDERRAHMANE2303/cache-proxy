@@ -1,8 +1,7 @@
 package com.cache_proxy.controllers;
 
 
-import com.cache_proxy.dtos.responses.ProxyStatus;
-import com.cache_proxy.models.ProxyRequest;
+import com.cache_proxy.dtos.responses.ProxyGetResponse;
 import com.cache_proxy.services.ProxyService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
@@ -19,13 +18,13 @@ public class ProxyController {
         this.proxyService = proxyService;
     }
 
-    @GetMapping("/{path}")
-    public ResponseEntity<ProxyStatus> getProxy(
+    @GetMapping("/{request}")
+    public ResponseEntity<ProxyGetResponse> proxyGet(
             HttpServletRequest request
     ){
         String uri = request.getRequestURI();
         String query = request.getQueryString();
-        ProxyStatus response = proxyService.createPOJO(uri,query);
+        ProxyGetResponse response = proxyService.createRequestPOJO(uri,query);
         return ResponseEntity.status(HttpStatus.OK)
                 .body(response);
     }
