@@ -1,3 +1,7 @@
 spring:
   application:
     name: cache-proxy
+
+cache-proxy:
+  upstream:
+    base-url: dummy_url_for_now
