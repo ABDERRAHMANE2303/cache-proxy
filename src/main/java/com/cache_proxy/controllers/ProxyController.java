@@ -18,7 +18,7 @@ public class ProxyController {
         this.proxyService = proxyService;
     }
 
-    @GetMapping("/{request}")
+    @GetMapping("/{*request}")
     public ResponseEntity<ProxyGetResponse> proxyGet(
             HttpServletRequest request
     ){
