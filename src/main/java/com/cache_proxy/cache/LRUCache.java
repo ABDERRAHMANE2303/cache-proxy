@@ -3,11 +3,13 @@ package com.cache_proxy.cache;
 import com.cache_proxy.config.CacheProxyParameters;
 import com.cache_proxy.models.ClientRequest;
 import com.cache_proxy.models.ProxyResponse;
+import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
+@Component
 public class LRUCache {
     private final CacheProxyParameters cachesettings;
     private final int capacity ;

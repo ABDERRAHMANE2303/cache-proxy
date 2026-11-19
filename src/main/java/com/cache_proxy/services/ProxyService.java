@@ -1,6 +1,7 @@
 package com.cache_proxy.services;
 
 
+import com.cache_proxy.cache.LRUCache;
 import com.cache_proxy.config.CacheProxyParameters;
 import com.cache_proxy.models.ClientRequest;
 import com.cache_proxy.models.ProxyResponse;
@@ -16,21 +17,38 @@ public class ProxyService {
 
     private final CacheProxyParameters cacheProxyParameters;
     private final RestClient client;
+    private final LRUCache cache;
+
     public ProxyService(
             CacheProxyParameters cacheProxyParameters,
-            RestClient client){
+            RestClient client,
+            LRUCache cache
+    ){
         this.client = client;
         this.cacheProxyParameters = cacheProxyParameters;
+        this.cache = cache;
     }
 
-    public ProxyResponse createRequestPOJO (String uri, String query){
+    public ProxyResponse createRequestPOJO (String uri, String query) {
 
         String baseUrl = cacheProxyParameters.upstream().baseUrl();
         String prefix = "/proxy/";
         String remoteUri = uri.substring(prefix.length());
-        ClientRequest clientRequest = new ClientRequest(remoteUri,query);
 
-        // a java.net.uri uri so it does not get decoded and corrupt the actual uri
+        ClientRequest clientRequest = new ClientRequest(remoteUri, query);
+
+        // get from cache , if not call upstream , add to the cache and return the upstream call
+        ProxyResponse proxyResponse = cache.get(clientRequest).orElseGet(
+                () -> {
+                    ProxyResponse response =  callUpstream(baseUrl, remoteUri, query);
+                    cache.put(clientRequest,response);
+                    return response;
+                }
+        );
+        return proxyResponse;
+    }
+
+    public ProxyResponse callUpstream(String baseUrl, String remoteUri,String query){
         URI target = UriComponentsBuilder
                 .fromUriString(baseUrl)
                 .path("/" + remoteUri)
@@ -48,4 +66,6 @@ public class ProxyService {
                 res.getHeaders().getContentType(),
                 res.getBody());
     }
+
+
 }
