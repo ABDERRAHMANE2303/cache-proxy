@@ -1,11 +1,9 @@
 package com.cache_proxy.controllers;
 
 
-import com.cache_proxy.dtos.responses.ProxyGetResponse;
-import com.cache_proxy.models.ServerResponse;
+import com.cache_proxy.models.ProxyResponse;
 import com.cache_proxy.services.ProxyService;
 import jakarta.servlet.http.HttpServletRequest;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -25,7 +23,7 @@ public class ProxyController {
     ){
         String uri = request.getRequestURI();
         String query = request.getQueryString();
-        ServerResponse response = proxyService.createRequestPOJO(uri,query);
+        ProxyResponse response = proxyService.createRequestPOJO(uri,query);
         return ResponseEntity.status(response.status())
                 .contentType(response.contentType())
                 .body(response.body());

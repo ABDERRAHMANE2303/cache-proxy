@@ -2,9 +2,8 @@ package com.cache_proxy.services;
 
 
 import com.cache_proxy.config.CacheProxyParameters;
-import com.cache_proxy.config.RestClientConfig;
 import com.cache_proxy.models.ClientRequest;
-import com.cache_proxy.models.ServerResponse;
+import com.cache_proxy.models.ProxyResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
@@ -24,7 +23,7 @@ public class ProxyService {
         this.cacheProxyParameters = cacheProxyParameters;
     }
 
-    public ServerResponse createRequestPOJO (String uri, String query){
+    public ProxyResponse createRequestPOJO (String uri, String query){
 
         String baseUrl = cacheProxyParameters.upstream().baseUrl();
         String prefix = "/proxy/";
@@ -44,7 +43,7 @@ public class ProxyService {
                 .retrieve()
                 .toEntity(byte[].class);
 
-        return new ServerResponse(
+        return new ProxyResponse(
                 res.getStatusCode().value(),
                 res.getHeaders().getContentType(),
                 res.getBody());
