@@ -3,17 +3,18 @@ package com.cache_proxy.services;
 
 import com.cache_proxy.cache.LRUCache;
 import com.cache_proxy.config.CacheProxyParameters;
-import com.cache_proxy.dtos.responses.CacheContentResponse;
+import com.cache_proxy.dtos.responses.CachedContentResponse;
 import com.cache_proxy.models.ClientRequest;
 import com.cache_proxy.models.ProxyResponse;
+import org.springdoc.core.service.GenericParameterService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
 @Service
 public class ProxyService {
@@ -21,15 +22,17 @@ public class ProxyService {
     private final CacheProxyParameters cacheProxyParameters;
     private final RestClient client;
     private final LRUCache cache;
+    private final GenericParameterService parameterBuilder;
 
     public ProxyService(
             CacheProxyParameters cacheProxyParameters,
             RestClient client,
-            LRUCache cache
-    ){
+            LRUCache cache,
+            GenericParameterService parameterBuilder){
         this.client = client;
         this.cacheProxyParameters = cacheProxyParameters;
         this.cache = cache;
+        this.parameterBuilder = parameterBuilder;
     }
 
     public ProxyResponse createRequestPOJO (String uri, String query) {
@@ -70,12 +73,20 @@ public class ProxyService {
                 res.getBody());
     }
 
-    public CacheContentResponse cacheStatus (){
+    public CachedContentResponse cacheStatus (){
 
-        Set<ClientRequest> keySet = cache.keySet();
-        List<String> requests = keySet.stream().map(key-> String.valueOf(new StringBuilder().append(key.path() + key.query()))).toList();
-        CacheContentResponse res = new CacheContentResponse(requests);
+        String baseUrl = cacheProxyParameters.upstream().baseUrl();
+        int capacity = cacheProxyParameters.cache().capacity();
+        int currentSize = cache.size();
 
+        List<ClientRequest> requests = cache.keysInOrder();
+        List<CachedContentResponse.Entry> cachedRequests = new ArrayList<>();
+        for (int i=0 ; i< requests.size();i++) {
+            cachedRequests.add(new CachedContentResponse.Entry(i,requests.get(i).toString()));
+        }
+
+        CachedContentResponse res = new CachedContentResponse(
+                baseUrl,capacity,currentSize,cachedRequests);
         return res;
     }
 

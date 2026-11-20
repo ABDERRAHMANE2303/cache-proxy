@@ -1,7 +1,7 @@
 package com.cache_proxy.controllers;
 
 
-import com.cache_proxy.dtos.responses.CacheContentResponse;
+import com.cache_proxy.dtos.responses.CachedContentResponse;
 import com.cache_proxy.models.ProxyResponse;
 import com.cache_proxy.services.ProxyService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -32,7 +32,7 @@ public class ProxyController {
     }
 
     @GetMapping("/cache/content")
-    ResponseEntity<CacheContentResponse> cacheStatus(){
+    ResponseEntity<CachedContentResponse> cacheStatus(){
         return ResponseEntity.status(HttpStatus.OK)
                 .body(proxyService.cacheStatus());
 

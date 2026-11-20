@@ -5,16 +5,13 @@ import com.cache_proxy.models.ClientRequest;
 import com.cache_proxy.models.ProxyResponse;
 import org.springframework.stereotype.Component;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 
 @Component
 public class LRUCache {
     private final CacheProxyParameters cachesettings;
     private final int capacity ;
-    public Map<ClientRequest, Node> requestNodeHashMap = new HashMap<>();
+    private Map<ClientRequest, Node> requestNodeHashMap = new HashMap<>();
     private final Node head = new Node(),tail = new Node();
 
     public LRUCache(CacheProxyParameters cachesettings){
@@ -56,8 +53,14 @@ public class LRUCache {
         return requestNodeHashMap.size();
     }
 
-    public Set<ClientRequest> keySet(){
-        return requestNodeHashMap.keySet();
+    public List<ClientRequest> keysInOrder(){
+        List<ClientRequest> KeysList = new ArrayList<>();
+        Node curr = head.next;
+        while (curr != tail){
+            KeysList.add(curr.request);
+            curr = curr.next;
+        }
+        return KeysList;
     }
 
     private class Node{
