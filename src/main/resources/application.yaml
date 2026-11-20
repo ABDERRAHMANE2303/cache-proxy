@@ -6,7 +6,7 @@ spring:
 
 cache-proxy:
   upstream:
-    base-url: http://localhost:8080
+    base-url: http://localhost:8000
     connection-timeout: 2s
     read-timeout: 5s
   cache:
