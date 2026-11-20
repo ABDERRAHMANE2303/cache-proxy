@@ -7,6 +7,6 @@ public record ClientRequest(
 ){
     @Override
     public String toString(){
-        return path + query != null ? query : ""  ;
+        return path + (query != null ? query : "" ) ;
     }
 }
