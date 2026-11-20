@@ -3,6 +3,7 @@ package com.cache_proxy.services;
 
 import com.cache_proxy.cache.LRUCache;
 import com.cache_proxy.config.CacheProxyParameters;
+import com.cache_proxy.dtos.responses.CacheContentResponse;
 import com.cache_proxy.models.ClientRequest;
 import com.cache_proxy.models.ProxyResponse;
 import org.springframework.http.ResponseEntity;
@@ -11,6 +12,8 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.URI;
+import java.util.List;
+import java.util.Set;
 
 @Service
 public class ProxyService {
@@ -66,6 +69,16 @@ public class ProxyService {
                 res.getHeaders().getContentType(),
                 res.getBody());
     }
+
+    public CacheContentResponse cacheStatus (){
+
+        Set<ClientRequest> keySet = cache.keySet();
+        List<String> requests = keySet.stream().map(key-> String.valueOf(new StringBuilder().append(key.path() + key.query()))).toList();
+        CacheContentResponse res = new CacheContentResponse(requests);
+
+        return res;
+    }
+
 
 
 }

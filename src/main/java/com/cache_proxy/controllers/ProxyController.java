@@ -1,9 +1,11 @@
 package com.cache_proxy.controllers;
 
 
+import com.cache_proxy.dtos.responses.CacheContentResponse;
 import com.cache_proxy.models.ProxyResponse;
 import com.cache_proxy.services.ProxyService;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -29,5 +31,10 @@ public class ProxyController {
                 .body(response.body());
     }
 
+    @GetMapping("/cache/content")
+    ResponseEntity<CacheContentResponse> cacheStatus(){
+        return ResponseEntity.status(HttpStatus.OK)
+                .body(proxyService.cacheStatus());
 
+    }
 }

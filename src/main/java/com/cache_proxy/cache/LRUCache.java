@@ -8,12 +8,13 @@ import org.springframework.stereotype.Component;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 @Component
 public class LRUCache {
     private final CacheProxyParameters cachesettings;
     private final int capacity ;
-    private Map<ClientRequest, Node> cache = new HashMap<>();
+    public Map<ClientRequest, Node> requestNodeHashMap = new HashMap<>();
     private final Node head = new Node(),tail = new Node();
 
     public LRUCache(CacheProxyParameters cachesettings){
@@ -24,31 +25,39 @@ public class LRUCache {
     }
 
     public void put(ClientRequest request ,ProxyResponse response ){
-        if (cache.containsKey(request)) {
-            Node node = cache.get(request);
+        if (requestNodeHashMap.containsKey(request)) {
+            Node node = requestNodeHashMap.get(request);
             node.response = response;
             remove(node);
             addLast(node);
         }else {
             Node node = new Node(request,response);
-            if (cache.size() == capacity){
-                cache.remove(head.next.request);
+            if (requestNodeHashMap.size() == capacity){
+                requestNodeHashMap.remove(head.next.request);
                 remove(head.next);
                 addLast(node);
             }else{
                 addLast(node);
             }
-            cache.put(request,node);
+            requestNodeHashMap.put(request,node);
         }
     }
 
     public Optional<ProxyResponse> get (ClientRequest request){
-        if (!cache.containsKey(request)){
+        if (!requestNodeHashMap.containsKey(request)){
             return Optional.empty();
         }
-        remove(cache.get(request));
-        addLast(cache.get(request));
-        return Optional.of(cache.get(request).response);
+        remove(requestNodeHashMap.get(request));
+        addLast(requestNodeHashMap.get(request));
+        return Optional.of(requestNodeHashMap.get(request).response);
+    }
+
+    public int size(){
+        return requestNodeHashMap.size();
+    }
+
+    public Set<ClientRequest> keySet(){
+        return requestNodeHashMap.keySet();
     }
 
     private class Node{
@@ -74,4 +83,5 @@ public class LRUCache {
         tail.prev.next = node;
         tail.prev = node;
     }
+
 }
