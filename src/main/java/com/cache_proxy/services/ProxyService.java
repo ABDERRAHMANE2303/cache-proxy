@@ -6,7 +6,6 @@ import com.cache_proxy.config.CacheProxyParameters;
 import com.cache_proxy.dtos.responses.CachedContentResponse;
 import com.cache_proxy.models.ClientRequest;
 import com.cache_proxy.models.ProxyResponse;
-import org.springdoc.core.service.GenericParameterService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
@@ -22,20 +21,18 @@ public class ProxyService {
     private final CacheProxyParameters cacheProxyParameters;
     private final RestClient client;
     private final LRUCache cache;
-    private final GenericParameterService parameterBuilder;
 
     public ProxyService(
             CacheProxyParameters cacheProxyParameters,
             RestClient client,
-            LRUCache cache,
-            GenericParameterService parameterBuilder){
+            LRUCache cache
+            ){
         this.client = client;
         this.cacheProxyParameters = cacheProxyParameters;
         this.cache = cache;
-        this.parameterBuilder = parameterBuilder;
     }
 
-    public ProxyResponse createRequestPOJO (String uri, String query) {
+    public ProxyResponse handleProxyRequest(String uri, String query) {
 
         String baseUrl = cacheProxyParameters.upstream().baseUrl();
         String prefix = "/proxy/";

@@ -1,22 +1,19 @@
 package com.cache_proxy.cache;
 
-import com.cache_proxy.config.CacheProxyParameters;
 import com.cache_proxy.models.ClientRequest;
 import com.cache_proxy.models.ProxyResponse;
-import org.springframework.stereotype.Component;
 
 import java.util.*;
 
-@Component
+
 public class LRUCache {
-    private final CacheProxyParameters cachesettings;
     private final int capacity ;
     private Map<ClientRequest, Node> requestNodeHashMap = new HashMap<>();
     private final Node head = new Node(),tail = new Node();
 
-    public LRUCache(CacheProxyParameters cachesettings){
-        this.cachesettings = cachesettings;
-        this.capacity = cachesettings.cache().capacity();
+    public LRUCache(int capacity) {
+        if (capacity <= 0) throw new IllegalArgumentException("capacity must be positive");
+        this.capacity = capacity;
         head.next = tail;
         tail.prev = head;
     }

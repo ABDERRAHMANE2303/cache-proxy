@@ -25,7 +25,7 @@ public class ProxyController {
     ){
         String uri = request.getRequestURI();
         String query = request.getQueryString();
-        ProxyResponse response = proxyService.createRequestPOJO(uri,query);
+        ProxyResponse response = proxyService.handleProxyRequest(uri,query);
         return ResponseEntity.status(response.status())
                 .contentType(response.contentType())
                 .body(response.body());
