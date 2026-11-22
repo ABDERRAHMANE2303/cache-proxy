@@ -10,14 +10,20 @@ import org.springframework.http.MediaType;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
+import java.time.Duration;
 
 public class LRUCacheTest {
     private LRUCache cache;
-
+    private FakeClock fakeclock;
 
     @BeforeEach
     void setup (){
-        cache = new LRUCache(2);
+        fakeclock = new FakeClock();
+        cache = new LRUCache(10,fakeclock,Duration.ofSeconds(60));
+    }
+
+    private LRUCache cacheWithCapacity(int capacity) {
+        return new LRUCache(capacity, fakeclock, Duration.ofSeconds(60));
     }
 
     @Test
@@ -61,6 +67,7 @@ public class LRUCacheTest {
     @DisplayName("put evicts the least recently used entry when the cache is full")
     // capacity = 2 -> put req1 req2 req3 -> cache contains req2 req3
     void putEvictsLeastRecentlyUsedEntryWhenFull(){
+        cache = cacheWithCapacity(2);
         String[] paths = {"/api/customers" , "/api/customers","/api/merchants"};
         String[] queries = {"status=INACTIVE","status=ACTIVE","status=ACTIVE"};
         ClientRequest[] reqs = new ClientRequest[3];
