@@ -20,6 +20,7 @@ public class LRUCache {
             throw new IllegalArgumentException("capacity must be positive");
         if (ttl == null || ttl.toMillis() <= 0)
             throw new IllegalArgumentException("ttl must be at least 1 ms");
+        Objects.requireNonNull(clock);
         this.capacity = capacity;
         this.clock = clock;
         this.ttl = ttl.toMillis();
@@ -27,15 +28,14 @@ public class LRUCache {
         tail.prev = head;
     }
 
-    public void put(ClientRequest request ,ProxyResponse response ){
+    public synchronized void put(ClientRequest request ,ProxyResponse response ){
         long now = clock.millis();
         Node requestedNode = requestNodeMap.get(request);
         if (requestedNode!=null) {
-            Node node = requestedNode;
-            node.response = response;
-            unlink(node);
-            addLast(node);
-            node.expiresAt = now + ttl;
+            requestedNode.response = response;
+            unlink(requestedNode);
+            addLast(requestedNode);
+            requestedNode.expiresAt = now + ttl;
         }else {
             Node node = new Node(request,response,now+ttl);
             Node lru = head.next;
@@ -48,7 +48,7 @@ public class LRUCache {
         }
     }
 
-    public Optional<ProxyResponse> get (ClientRequest request){
+    public synchronized Optional<ProxyResponse> get (ClientRequest request){
         long now = clock.millis();
         Node responseNode = requestNodeMap.get(request);
         if (responseNode == null){
@@ -63,12 +63,12 @@ public class LRUCache {
         return Optional.of(responseNode.response);
     }
 
-    public int size(){
+    public synchronized int size(){
         return requestNodeMap.size();
     }
 
     /** Returns keys ordered from least to most recently used. */
-    public List<ClientRequest> keysInOrder(){
+    public synchronized List<ClientRequest> keysInOrder(){
         List<ClientRequest> keysList = new ArrayList<>();
         Node curr = head.next;
         while (curr != tail){
