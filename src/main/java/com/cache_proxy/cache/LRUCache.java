@@ -11,12 +11,15 @@ import java.util.*;
 public class LRUCache {
     private final int capacity ;
     private final long ttl;
-    private Map<ClientRequest, Node> requestNodeHashMap = new HashMap<>();
+    private final Map<ClientRequest, Node> requestNodeMap = new HashMap<>();
     private final Node head = new Node(),tail = new Node();
     private final Clock clock;
 
     public LRUCache(int capacity, Clock clock, Duration ttl) {
-        if (capacity <= 0) throw new IllegalArgumentException("capacity must be positive");
+        if (capacity <= 0)
+            throw new IllegalArgumentException("capacity must be positive");
+        if (ttl == null || ttl.toMillis() <= 0)
+            throw new IllegalArgumentException("ttl must be at least 1 ms");
         this.capacity = capacity;
         this.clock = clock;
         this.ttl = ttl.toMillis();
@@ -26,53 +29,56 @@ public class LRUCache {
 
     public void put(ClientRequest request ,ProxyResponse response ){
         long now = clock.millis();
-        if (requestNodeHashMap.containsKey(request)) {
-            Node node = requestNodeHashMap.get(request);
+        Node requestedNode = requestNodeMap.get(request);
+        if (requestedNode!=null) {
+            Node node = requestedNode;
             node.response = response;
-            remove(node);
+            unlink(node);
             addLast(node);
             node.expiresAt = now + ttl;
         }else {
             Node node = new Node(request,response,now+ttl);
-            if (requestNodeHashMap.size() == capacity){
-                requestNodeHashMap.remove(head.next.request);
-                remove(head.next);
+            Node lru = head.next;
+            if (requestNodeMap.size() == capacity){
+                requestNodeMap.remove(lru.request);
+                unlink(lru);
             }
             addLast(node);
-            requestNodeHashMap.put(request,node);
+            requestNodeMap.put(request,node);
         }
     }
 
     public Optional<ProxyResponse> get (ClientRequest request){
         long now = clock.millis();
-        Node responseNode = requestNodeHashMap.get(request);
+        Node responseNode = requestNodeMap.get(request);
         if (responseNode == null){
             return Optional.empty();
         }else if (responseNode.expiresAt < now) {
-            remove(responseNode);
-            requestNodeHashMap.remove(request);
+            unlink(responseNode);
+            requestNodeMap.remove(request);
             return Optional.empty();
         }
-        remove(responseNode);
+        unlink(responseNode);
         addLast(responseNode);
         return Optional.of(responseNode.response);
     }
 
     public int size(){
-        return requestNodeHashMap.size();
+        return requestNodeMap.size();
     }
 
+    /** Returns keys ordered from least to most recently used. */
     public List<ClientRequest> keysInOrder(){
-        List<ClientRequest> KeysList = new ArrayList<>();
+        List<ClientRequest> keysList = new ArrayList<>();
         Node curr = head.next;
         while (curr != tail){
-            KeysList.add(curr.request);
+            keysList.add(curr.request);
             curr = curr.next;
         }
-        return KeysList;
+        return keysList;
     }
 
-    private class Node{
+    private static class Node{
         ClientRequest request;
         ProxyResponse response;
         long expiresAt ;
@@ -89,7 +95,7 @@ public class LRUCache {
         public Node(){}
     }
 
-    private void remove (Node node){
+    private void unlink(Node node){
         node.prev.next = node.next;
         node.next.prev=node.prev;
     }
