@@ -13,7 +13,7 @@ public class LRUCache {
     private final long ttl;
     private Map<ClientRequest, Node> requestNodeHashMap = new HashMap<>();
     private final Node head = new Node(),tail = new Node();
-    private final Clock clock;   //clock.millis()
+    private final Clock clock;
 
     public LRUCache(int capacity, Clock clock, Duration ttl) {
         if (capacity <= 0) throw new IllegalArgumentException("capacity must be positive");
@@ -25,31 +25,37 @@ public class LRUCache {
     }
 
     public void put(ClientRequest request ,ProxyResponse response ){
+        long now = clock.millis();
         if (requestNodeHashMap.containsKey(request)) {
             Node node = requestNodeHashMap.get(request);
             node.response = response;
             remove(node);
             addLast(node);
+            node.expiresAt = now + ttl;
         }else {
-            Node node = new Node(request,response);
+            Node node = new Node(request,response,now+ttl);
             if (requestNodeHashMap.size() == capacity){
                 requestNodeHashMap.remove(head.next.request);
                 remove(head.next);
-                addLast(node);
-            }else{
-                addLast(node);
             }
+            addLast(node);
             requestNodeHashMap.put(request,node);
         }
     }
 
     public Optional<ProxyResponse> get (ClientRequest request){
-        if (!requestNodeHashMap.containsKey(request)){
+        long now = clock.millis();
+        Node responseNode = requestNodeHashMap.get(request);
+        if (responseNode == null){
+            return Optional.empty();
+        }else if (responseNode.expiresAt < now) {
+            remove(responseNode);
+            requestNodeHashMap.remove(request);
             return Optional.empty();
         }
-        remove(requestNodeHashMap.get(request));
-        addLast(requestNodeHashMap.get(request));
-        return Optional.of(requestNodeHashMap.get(request).response);
+        remove(responseNode);
+        addLast(responseNode);
+        return Optional.of(responseNode.response);
     }
 
     public int size(){
@@ -69,14 +75,16 @@ public class LRUCache {
     private class Node{
         ClientRequest request;
         ProxyResponse response;
-        long expiresAt = clock.millis() + ttl;
+        long expiresAt ;
         Node next;
         Node prev;
         public Node(
                 ClientRequest request,
-                ProxyResponse response){
+                ProxyResponse response,
+                long expiresAt){
             this.request =request;
             this.response = response;
+            this.expiresAt = expiresAt;
         }
         public Node(){}
     }
