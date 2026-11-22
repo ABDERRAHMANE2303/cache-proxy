@@ -3,17 +3,23 @@ package com.cache_proxy.cache;
 import com.cache_proxy.models.ClientRequest;
 import com.cache_proxy.models.ProxyResponse;
 
+import java.time.Clock;
+import java.time.Duration;
 import java.util.*;
 
 
 public class LRUCache {
     private final int capacity ;
+    private final long ttl;
     private Map<ClientRequest, Node> requestNodeHashMap = new HashMap<>();
     private final Node head = new Node(),tail = new Node();
+    private final Clock clock;   //clock.millis()
 
-    public LRUCache(int capacity) {
+    public LRUCache(int capacity, Clock clock, Duration ttl) {
         if (capacity <= 0) throw new IllegalArgumentException("capacity must be positive");
         this.capacity = capacity;
+        this.clock = clock;
+        this.ttl = ttl.toMillis();
         head.next = tail;
         tail.prev = head;
     }
@@ -63,9 +69,12 @@ public class LRUCache {
     private class Node{
         ClientRequest request;
         ProxyResponse response;
+        long expiresAt = clock.millis() + ttl;
         Node next;
         Node prev;
-        public Node(ClientRequest request, ProxyResponse response){
+        public Node(
+                ClientRequest request,
+                ProxyResponse response){
             this.request =request;
             this.response = response;
         }
