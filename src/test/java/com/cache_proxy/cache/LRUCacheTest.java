@@ -37,10 +37,8 @@ public class LRUCacheTest {
     @Test
     @DisplayName("get returns the value stored by put")
     void getReturnsStoredValue(){
-        ClientRequest req = new ClientRequest("/api/customers","status=INACTIVE");
-        ProxyResponse res = new ProxyResponse(
-                200, MediaType.APPLICATION_JSON, "{}".getBytes(StandardCharsets.UTF_8
-        ));
+        ClientRequest req = request("request");
+        ProxyResponse res = response(200);
         cache.put(req,res);
         assertThat(cache.get(req)).isEqualTo(Optional.of(res));
     }
@@ -48,14 +46,10 @@ public class LRUCacheTest {
     @Test
     @DisplayName("get moves the entry to most recently used")
     void getRefreshesRecency (){
-        ClientRequest req1 = new ClientRequest("/api/customers","status=INACTIVE");
-        ClientRequest req2 = new ClientRequest("/api/customers","status=ACTIVE");
-        ProxyResponse res1 = new ProxyResponse(
-                200, MediaType.APPLICATION_JSON, "{}".getBytes(StandardCharsets.UTF_8
-        ));
-        ProxyResponse res2 = new ProxyResponse(
-                200, MediaType.APPLICATION_JSON, "{}".getBytes(StandardCharsets.UTF_8
-        ));
+        ClientRequest req1 = request("request1");
+        ClientRequest req2 = request("req2");
+        ProxyResponse res1 = response(200);
+        ProxyResponse res2 = response(201);
         cache.put(req1,res1);
         cache.put(req2,res2);
         assertThat(cache.keysInOrder()).containsExactly(req1,req2);
@@ -68,17 +62,10 @@ public class LRUCacheTest {
     // capacity = 2 -> put req1 req2 req3 -> cache contains req2 req3
     void putEvictsLeastRecentlyUsedEntryWhenFull(){
         cache = cacheWithCapacity(2);
-        String[] paths = {"/api/customers" , "/api/customers","/api/merchants"};
-        String[] queries = {"status=INACTIVE","status=ACTIVE","status=ACTIVE"};
         ClientRequest[] reqs = new ClientRequest[3];
         for (int i = 0;i<3;i++){
-            reqs[i] = new ClientRequest(paths[i] , queries[i]);
-            cache.put(
-                    reqs[i],
-                    new ProxyResponse(
-                            200, MediaType.APPLICATION_JSON, "{}".getBytes(StandardCharsets.UTF_8
-                    ))
-            );
+            reqs[i] = request("req" + i);
+            cache.put(reqs[i],response("body" + i));
         }
         assertThat(cache.keysInOrder()).containsExactly(reqs[1],reqs[2]);
         assertThat(cache.get(reqs[0])).isEmpty();
@@ -88,25 +75,33 @@ public class LRUCacheTest {
     @Test
     @DisplayName("put on an existing key replaces the value and refreshes recency without evicting")
     void putUpdatesExistingKeyWithoutEviction(){
-        ClientRequest req1 = new ClientRequest("/api/customers","status=INACTIVE");
-        ClientRequest req2 = new ClientRequest("/api/customers","status=ACTIVE");
-        ProxyResponse res1 = new ProxyResponse(
-                200, MediaType.APPLICATION_JSON, "{}".getBytes(StandardCharsets.UTF_8
-        ));
-        ProxyResponse res2 = new ProxyResponse(
-                200, MediaType.APPLICATION_JSON, "{}".getBytes(StandardCharsets.UTF_8
-        ));
+        ClientRequest req1 = request("req1");
+        ClientRequest req2 = request("req2");
+        ProxyResponse res1 = response(200);
+        ProxyResponse res2 = response(201);
 
         cache.put(req1,res1);
         cache.put(req2,res2);
-        ProxyResponse tempres = new ProxyResponse(
-                201, MediaType.APPLICATION_JSON, "{}".getBytes(StandardCharsets.UTF_8
-        ));
-        cache.put(
-                req1,
-                tempres
-                );
+        ProxyResponse tempres = response("temp");
+        cache.put(req1, tempres);
         assertThat(cache.keysInOrder()).containsExactly(req2,req1);
         assertThat(cache.get(req1).orElseThrow()).isEqualTo(tempres);
     }
+
+    // a shorter req/res creator since i create them a lot , itll reduce so much boilerplate
+
+    private static ClientRequest request(String name) {
+        return new ClientRequest("/api/" + name, "q=" + name);
+    }
+
+    private static ProxyResponse response(String body) {
+        return new ProxyResponse(200, MediaType.APPLICATION_JSON,
+                body.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private static ProxyResponse response(int status) {
+        return new ProxyResponse(status, MediaType.APPLICATION_JSON,
+                "{}".getBytes(StandardCharsets.UTF_8));
+    }
+
 }
