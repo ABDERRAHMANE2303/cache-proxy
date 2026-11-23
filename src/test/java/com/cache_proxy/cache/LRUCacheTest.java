@@ -88,6 +88,46 @@ public class LRUCacheTest {
         assertThat(cache.get(req1).orElseThrow()).isEqualTo(tempres);
     }
 
+    @Test
+    @DisplayName("entry is valid at exactly expiresAt and expired one millisecond later")
+    void getEntryValidAtBoundaryAndExpiredJustAfter() {
+        ClientRequest req = request("req");
+        ProxyResponse res = response("response");
+        cache.put(req, res);
+
+        fakeclock.advance(Duration.ofSeconds(60));
+        assertThat(cache.get(req)).isPresent();      // exactly at expiresAt: still valid
+
+        fakeclock.advance(Duration.ofMillis(1));
+        assertThat(cache.get(req)).isEmpty();        // 1 ms past: expired
+    }
+
+    @Test
+    @DisplayName("put on an existing key resets the TTL")
+    void putOnExistingKeyResetsTtl() {
+        ClientRequest req = request("req");
+        ProxyResponse res = response("response");
+        cache.put(req, res);
+
+        fakeclock.advance(Duration.ofSeconds(40));
+        cache.put(req, res);
+        fakeclock.advance(Duration.ofSeconds(40));
+        assertThat(cache.get(req)).isPresent();
+    }
+
+    @Test
+    @DisplayName("get on an expired entry removes it")
+    void getExpiredEntryRemovesItFromCache() {
+        ClientRequest req = request("req");
+        ProxyResponse res = response("response");
+        cache.put(req, res);
+
+        fakeclock.advance(Duration.ofSeconds(61));
+        cache.get(req);
+        assertThat(cache.size()).isZero();
+        assertThat(cache.keysInOrder()).isEmpty();
+    }
+
     // a shorter req/res creator since i create them a lot , itll reduce so much boilerplate
 
     private static ClientRequest request(String name) {
