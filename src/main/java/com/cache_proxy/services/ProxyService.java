@@ -51,6 +51,7 @@ public class ProxyService {
         if (cached.isPresent()) return new ProxyResponse(RequestStatus.HIT,cached.get());
 
         ProxyResult fresh = callUpstream(baseUrl,remoteUri,query);
+        cache.put(clientRequest,fresh);
         return new ProxyResponse(RequestStatus.MISS,fresh);
     }
 

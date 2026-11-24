@@ -11,7 +11,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/proxy")
 public class ProxyController {
 
     private final ProxyService proxyService;
@@ -20,7 +19,7 @@ public class ProxyController {
         this.proxyService = proxyService;
     }
 
-    @GetMapping("/{*request}")
+    @GetMapping("/proxy/{*request}")
     public ResponseEntity<byte[]> proxyGet(
             HttpServletRequest request
     ){
