@@ -1,78 +1,119 @@
 package com.cache_proxy.cache;
 
+import com.cache_proxy.dtos.responses.CacheStatsResponse;
 import com.cache_proxy.models.ClientRequest;
-import com.cache_proxy.models.ProxyResponse;
+import com.cache_proxy.models.UpstreamResponse;
 
+import java.time.Clock;
+import java.time.Duration;
 import java.util.*;
 
 
 public class LRUCache {
     private final int capacity ;
-    private Map<ClientRequest, Node> requestNodeHashMap = new HashMap<>();
+    private final long ttl;
+    private final Map<ClientRequest, Node> requestNodeMap = new HashMap<>();
+    private final Clock clock;
     private final Node head = new Node(),tail = new Node();
+    private long hits =0 ;
+    private long misses= 0;
+    private long evictions =0 ;
+    private long expirations =0;
 
-    public LRUCache(int capacity) {
-        if (capacity <= 0) throw new IllegalArgumentException("capacity must be positive");
+
+    public LRUCache(int capacity, Clock clock, Duration ttl) {
+        if (capacity <= 0)
+            throw new IllegalArgumentException("capacity must be positive");
+        if (ttl == null || ttl.toMillis() <= 0)
+            throw new IllegalArgumentException("ttl must be at least 1 ms");
+        Objects.requireNonNull(clock);
         this.capacity = capacity;
+        this.clock = clock;
+        this.ttl = ttl.toMillis();
         head.next = tail;
         tail.prev = head;
     }
 
-    public void put(ClientRequest request ,ProxyResponse response ){
-        if (requestNodeHashMap.containsKey(request)) {
-            Node node = requestNodeHashMap.get(request);
-            node.response = response;
-            remove(node);
-            addLast(node);
+    public synchronized void put(ClientRequest request , UpstreamResponse response ){
+        long now = clock.millis();
+        Node requestedNode = requestNodeMap.get(request);
+        if (requestedNode!=null) {
+            requestedNode.response = response;
+            unlink(requestedNode);
+            addLast(requestedNode);
+            requestedNode.expiresAt = now + ttl;
         }else {
-            Node node = new Node(request,response);
-            if (requestNodeHashMap.size() == capacity){
-                requestNodeHashMap.remove(head.next.request);
-                remove(head.next);
-                addLast(node);
-            }else{
-                addLast(node);
+            Node node = new Node(request,response,now+ttl);
+            Node lru = head.next;
+            if (requestNodeMap.size() == capacity){
+                requestNodeMap.remove(lru.request);
+                unlink(lru);
+                if (lru.expiresAt < now) expirations++;
+                else evictions++;
             }
-            requestNodeHashMap.put(request,node);
+            addLast(node);
+            requestNodeMap.put(request,node);
         }
     }
 
-    public Optional<ProxyResponse> get (ClientRequest request){
-        if (!requestNodeHashMap.containsKey(request)){
+    public synchronized Optional<UpstreamResponse> get (ClientRequest request){
+        long now = clock.millis();
+        Node responseNode = requestNodeMap.get(request);
+        if (responseNode == null){
+            misses++;
+            return Optional.empty();
+        }else if (responseNode.expiresAt < now) {
+            expirations++;
+            misses++;
+            unlink(responseNode);
+            requestNodeMap.remove(request);
             return Optional.empty();
         }
-        remove(requestNodeHashMap.get(request));
-        addLast(requestNodeHashMap.get(request));
-        return Optional.of(requestNodeHashMap.get(request).response);
+        unlink(responseNode);
+        addLast(responseNode);
+        hits ++;
+        return Optional.of(responseNode.response);
     }
 
-    public int size(){
-        return requestNodeHashMap.size();
+    public synchronized int size(){
+        return requestNodeMap.size();
     }
 
-    public List<ClientRequest> keysInOrder(){
-        List<ClientRequest> KeysList = new ArrayList<>();
+    /** Returns keys ordered from least to most recently used. */
+    public synchronized List<ClientRequest> keysInOrder(){
+        List<ClientRequest> keysList = new ArrayList<>();
         Node curr = head.next;
         while (curr != tail){
-            KeysList.add(curr.request);
+            keysList.add(curr.request);
             curr = curr.next;
         }
-        return KeysList;
+        return keysList;
     }
 
-    private class Node{
+    public CacheStatsResponse stats (){
+        return new CacheStatsResponse(hits,misses,evictions,expirations,capacity,requestNodeMap.size());
+    }
+
+    // utilities
+
+    private static class Node{
         ClientRequest request;
-        ProxyResponse response;
+        UpstreamResponse response;
+        long expiresAt ;
         Node next;
         Node prev;
-        public Node(ClientRequest request, ProxyResponse response){
+        public Node(
+                ClientRequest request,
+                UpstreamResponse response,
+                long expiresAt){
             this.request =request;
             this.response = response;
+            this.expiresAt = expiresAt;
         }
         public Node(){}
     }
 
-    private void remove (Node node){
+    private void unlink(Node node){
         node.prev.next = node.next;
         node.next.prev=node.prev;
     }
