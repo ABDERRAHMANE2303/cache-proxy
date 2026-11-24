@@ -3,7 +3,7 @@ package com.cache_proxy.models;
 
 import org.springframework.http.MediaType;
 
-public record ProxyResponse(
+public record ProxyResult(
         int status,
         MediaType contentType,
         byte[] body

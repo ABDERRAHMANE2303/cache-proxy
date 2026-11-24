@@ -1,7 +1,7 @@
 package com.cache_proxy.cache;
 
 import com.cache_proxy.models.ClientRequest;
-import com.cache_proxy.models.ProxyResponse;
+import com.cache_proxy.models.ProxyResult;
 
 import java.time.Clock;
 import java.time.Duration;
@@ -28,7 +28,7 @@ public class LRUCache {
         tail.prev = head;
     }
 
-    public synchronized void put(ClientRequest request ,ProxyResponse response ){
+    public synchronized void put(ClientRequest request , ProxyResult response ){
         long now = clock.millis();
         Node requestedNode = requestNodeMap.get(request);
         if (requestedNode!=null) {
@@ -48,7 +48,7 @@ public class LRUCache {
         }
     }
 
-    public synchronized Optional<ProxyResponse> get (ClientRequest request){
+    public synchronized Optional<ProxyResult> get (ClientRequest request){
         long now = clock.millis();
         Node responseNode = requestNodeMap.get(request);
         if (responseNode == null){
@@ -80,13 +80,13 @@ public class LRUCache {
 
     private static class Node{
         ClientRequest request;
-        ProxyResponse response;
+        ProxyResult response;
         long expiresAt ;
         Node next;
         Node prev;
         public Node(
                 ClientRequest request,
-                ProxyResponse response,
+                ProxyResult response,
                 long expiresAt){
             this.request =request;
             this.response = response;

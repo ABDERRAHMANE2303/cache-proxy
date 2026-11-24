@@ -2,7 +2,8 @@ package com.cache_proxy.controllers;
 
 
 import com.cache_proxy.dtos.responses.CachedContentResponse;
-import com.cache_proxy.models.ProxyResponse;
+import com.cache_proxy.dtos.responses.ProxyResponse;
+import com.cache_proxy.models.ProxyResult;
 import com.cache_proxy.services.ProxyService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
@@ -23,12 +24,12 @@ public class ProxyController {
     public ResponseEntity<byte[]> proxyGet(
             HttpServletRequest request
     ){
-        String uri = request.getRequestURI();
-        String query = request.getQueryString();
-        ProxyResponse response = proxyService.handleProxyRequest(uri,query);
-        return ResponseEntity.status(response.status())
-                .contentType(response.contentType())
-                .body(response.body());
+
+        ProxyResponse response = proxyService.handleClientRequest(request);
+        return ResponseEntity.status(response.proxyResult().status())
+                .contentType(response.proxyResult().contentType())
+                .header("X-Cache",response.status().name())
+                .body(response.proxyResult().body());
     }
 
     @GetMapping("/cache/content")
