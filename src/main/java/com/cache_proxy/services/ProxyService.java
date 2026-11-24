@@ -3,11 +3,12 @@ package com.cache_proxy.services;
 
 import com.cache_proxy.cache.LRUCache;
 import com.cache_proxy.config.CacheProxyParameters;
+import com.cache_proxy.dtos.responses.CacheStatsResponse;
 import com.cache_proxy.dtos.responses.CachedContentResponse;
 import com.cache_proxy.dtos.responses.ProxyResponse;
-import com.cache_proxy.enums.RequestStatus;
+import com.cache_proxy.enums.CacheStatus;
 import com.cache_proxy.models.ClientRequest;
-import com.cache_proxy.models.ProxyResult;
+import com.cache_proxy.models.UpstreamResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -47,15 +48,15 @@ public class ProxyService {
         ClientRequest clientRequest = new ClientRequest(remoteUri, query);
 
         // get from cache , if not call upstream , add to the cache and return the upstream call
-        Optional<ProxyResult> cached = cache.get(clientRequest);
-        if (cached.isPresent()) return new ProxyResponse(RequestStatus.HIT,cached.get());
+        Optional<UpstreamResponse> cached = cache.get(clientRequest);
+        if (cached.isPresent()) return new ProxyResponse(CacheStatus.HIT,cached.get());
 
-        ProxyResult fresh = callUpstream(baseUrl,remoteUri,query);
+        UpstreamResponse fresh = callUpstream(baseUrl,remoteUri,query);
         cache.put(clientRequest,fresh);
-        return new ProxyResponse(RequestStatus.MISS,fresh);
+        return new ProxyResponse(CacheStatus.MISS,fresh);
     }
 
-    public ProxyResult callUpstream(String baseUrl, String remoteUri, String query){
+    public UpstreamResponse callUpstream(String baseUrl, String remoteUri, String query){
         URI target = UriComponentsBuilder
                 .fromUriString(baseUrl)
                 .path("/" + remoteUri)
@@ -68,7 +69,7 @@ public class ProxyService {
                 .retrieve()
                 .toEntity(byte[].class);
 
-        return new ProxyResult(
+        return new UpstreamResponse(
                 res.getStatusCode().value(),
                 res.getHeaders().getContentType(),
                 res.getBody());
@@ -89,6 +90,10 @@ public class ProxyService {
         CachedContentResponse res = new CachedContentResponse(
                 baseUrl,capacity,currentSize,cachedRequests);
         return res;
+    }
+
+    public CacheStatsResponse cacheStats(){
+        return cache.stats();
     }
 
 

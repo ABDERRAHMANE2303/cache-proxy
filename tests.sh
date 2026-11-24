@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Fires the listed GET requests at the proxy and prints: status  time  path
+# Fires the listed GET requests at the proxy and prints: statusCode  time  path
 #
 # Usage:
 #   bash script.sh                 # one round, sequential
@@ -38,11 +38,11 @@ URLS=(
   # "/proxy/api/customers/<customer-id>"
 
   # ### Edge cases
-  # "/proxy/api/payments?status=success"                      # lowercase enum, likely a 400 upstream
+  # "/proxy/api/payments?statusCode=success"                      # lowercase enum, likely a 400 upstream
   "/proxy/api/payments?status="
   "/proxy/api/payments?"
   # "/proxy/api/payments/00000000-0000-0000-0000-000000000000" # unknown id, upstream error
-  # "/proxy/api/payments?status=SUCCESS&status=FAILED"         # repeated key, may be a 400
+  # "/proxy/api/payments?statusCode=SUCCESS&statusCode=FAILED"         # repeated key, may be a 400
   # "/proxy/"
   # "/proxy"
 )

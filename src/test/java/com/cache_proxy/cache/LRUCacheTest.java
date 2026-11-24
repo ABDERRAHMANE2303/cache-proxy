@@ -2,7 +2,7 @@ package com.cache_proxy.cache;
 
 import static org.assertj.core.api.Assertions.*;
 import com.cache_proxy.models.ClientRequest;
-import com.cache_proxy.models.ProxyResult;
+import com.cache_proxy.models.UpstreamResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -30,7 +30,7 @@ public class LRUCacheTest {
     @DisplayName("get returns empty when the key is not cached")
     void getReturnsEmptyForMissingKey(){
         String path = "/api/customers";
-        String query = "status=INACTIVE";
+        String query = "statusCode=INACTIVE";
         assertThat(cache.get(new ClientRequest(path,query))).isEmpty();
     }
 
@@ -38,7 +38,7 @@ public class LRUCacheTest {
     @DisplayName("get returns the value stored by put")
     void getReturnsStoredValue(){
         ClientRequest req = request("request");
-        ProxyResult res = response(200);
+        UpstreamResponse res = response(200);
         cache.put(req,res);
         assertThat(cache.get(req)).isEqualTo(Optional.of(res));
     }
@@ -48,8 +48,8 @@ public class LRUCacheTest {
     void getRefreshesRecency (){
         ClientRequest req1 = request("request1");
         ClientRequest req2 = request("req2");
-        ProxyResult res1 = response(200);
-        ProxyResult res2 = response(201);
+        UpstreamResponse res1 = response(200);
+        UpstreamResponse res2 = response(201);
         cache.put(req1,res1);
         cache.put(req2,res2);
         assertThat(cache.keysInOrder()).containsExactly(req1,req2);
@@ -77,12 +77,12 @@ public class LRUCacheTest {
     void putUpdatesExistingKeyWithoutEviction(){
         ClientRequest req1 = request("req1");
         ClientRequest req2 = request("req2");
-        ProxyResult res1 = response(200);
-        ProxyResult res2 = response(201);
+        UpstreamResponse res1 = response(200);
+        UpstreamResponse res2 = response(201);
 
         cache.put(req1,res1);
         cache.put(req2,res2);
-        ProxyResult tempres = response("temp");
+        UpstreamResponse tempres = response("temp");
         cache.put(req1, tempres);
         assertThat(cache.keysInOrder()).containsExactly(req2,req1);
         assertThat(cache.get(req1).orElseThrow()).isEqualTo(tempres);
@@ -92,7 +92,7 @@ public class LRUCacheTest {
     @DisplayName("entry is valid at exactly expiresAt and expired one millisecond later")
     void getEntryValidAtBoundaryAndExpiredJustAfter() {
         ClientRequest req = request("req");
-        ProxyResult res = response("response");
+        UpstreamResponse res = response("response");
         cache.put(req, res);
 
         fakeclock.advance(Duration.ofSeconds(60));
@@ -106,7 +106,7 @@ public class LRUCacheTest {
     @DisplayName("put on an existing key resets the TTL")
     void putOnExistingKeyResetsTtl() {
         ClientRequest req = request("req");
-        ProxyResult res = response("response");
+        UpstreamResponse res = response("response");
         cache.put(req, res);
 
         fakeclock.advance(Duration.ofSeconds(40));
@@ -119,7 +119,7 @@ public class LRUCacheTest {
     @DisplayName("get on an expired entry removes it")
     void getExpiredEntryRemovesItFromCache() {
         ClientRequest req = request("req");
-        ProxyResult res = response("response");
+        UpstreamResponse res = response("response");
         cache.put(req, res);
 
         fakeclock.advance(Duration.ofSeconds(61));
@@ -134,13 +134,13 @@ public class LRUCacheTest {
         return new ClientRequest("/api/" + name, "q=" + name);
     }
 
-    private static ProxyResult response(String body) {
-        return new ProxyResult(200, MediaType.APPLICATION_JSON,
+    private static UpstreamResponse response(String body) {
+        return new UpstreamResponse(200, MediaType.APPLICATION_JSON,
                 body.getBytes(StandardCharsets.UTF_8));
     }
 
-    private static ProxyResult response(int status) {
-        return new ProxyResult(status, MediaType.APPLICATION_JSON,
+    private static UpstreamResponse response(int status) {
+        return new UpstreamResponse(status, MediaType.APPLICATION_JSON,
                 "{}".getBytes(StandardCharsets.UTF_8));
     }
 

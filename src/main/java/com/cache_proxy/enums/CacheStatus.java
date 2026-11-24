@@ -1,6 +1,6 @@
 package com.cache_proxy.enums;
 
-public enum RequestStatus {
+public enum CacheStatus {
     HIT,
     MISS
 }
