@@ -7,14 +7,18 @@ import com.cache_proxy.dtos.responses.CacheStatsResponse;
 import com.cache_proxy.dtos.responses.CachedContentResponse;
 import com.cache_proxy.dtos.responses.ProxyResponse;
 import com.cache_proxy.enums.CacheStatus;
+import com.cache_proxy.exceptions.custom.UpstreamTimeoutException;
+import com.cache_proxy.exceptions.custom.UpstreamUnavailableException;
 import com.cache_proxy.models.ClientRequest;
 import com.cache_proxy.models.UpstreamResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
@@ -51,28 +55,35 @@ public class ProxyService {
         Optional<UpstreamResponse> cached = cache.get(clientRequest);
         if (cached.isPresent()) return new ProxyResponse(CacheStatus.HIT,cached.get());
 
-        UpstreamResponse fresh = callUpstream(baseUrl,remoteUri,query);
-        cache.put(clientRequest,fresh);
-        return new ProxyResponse(CacheStatus.MISS,fresh);
+        UpstreamResponse fresh = callUpstream(baseUrl, remoteUri, query);
+        if (fresh.statusCode() == 200) cache.put(clientRequest, fresh);
+        return new ProxyResponse(CacheStatus.MISS, fresh);
     }
 
-    public UpstreamResponse callUpstream(String baseUrl, String remoteUri, String query){
+    public UpstreamResponse callUpstream(String baseUrl, String remoteUri, String query) {
         URI target = UriComponentsBuilder
                 .fromUriString(baseUrl)
                 .path("/" + remoteUri)
                 .query(query)
-                .build(true)   // dont encode again , already encoded
+                .build(true)
                 .toUri();
+        try {
+            return client.get()
+                    .uri(target)
+                    .exchange((request, response) -> new UpstreamResponse(
+                            response.getStatusCode().value(),
+                            response.getHeaders().getContentType(),
+                            response.getBody().readAllBytes()));   // body must be read inside the lambda
+        } catch (ResourceAccessException e) {
+            if (isTimeout(e)) throw new UpstreamTimeoutException(e);
+            throw new UpstreamUnavailableException(e);
+        }
+    }
 
-        ResponseEntity<byte[]> res = client.get()
-                .uri(target)
-                .retrieve()
-                .toEntity(byte[].class);
-
-        return new UpstreamResponse(
-                res.getStatusCode().value(),
-                res.getHeaders().getContentType(),
-                res.getBody());
+    private static boolean isTimeout(Throwable t) {
+        for (; t != null; t = t.getCause())
+            if (t instanceof SocketTimeoutException) return true;
+        return false;
     }
 
     public CachedContentResponse cacheStatus (){
@@ -95,7 +106,5 @@ public class ProxyService {
     public CacheStatsResponse cacheStats(){
         return cache.stats();
     }
-
-
 
 }
